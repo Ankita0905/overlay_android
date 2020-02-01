@@ -1,13 +1,24 @@
 package com.example.overlay_android;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -23,6 +34,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     Polyline line;
     Polygon shape;
+
+    LocationManager locationManager;
+    LocationListener locationListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,9 +62,124 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+        locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                // set the home location
+                setHomeLocation(location);
+
+            }
+
+            @Override
+            public void onStatusChanged(String s, int i, Bundle bundle) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String s) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String s) {
+
+            }
+        };
+        //check permission
+        if(!checkPermission())
+            requestPermission();
+        else
+            getLocation();
+
+        //long press on map
+        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(LatLng latLng) {
+                Location location = new Location("Your Destination");
+                location.setLatitude(latLng.latitude);
+                location.setLongitude(latLng.longitude);
+
+                //set marker
+                setMarker(location);
+            }
+        });
+
+    }
+
+    private void setMarker(Location location)
+    {
+       // mMap.clear();
+        LatLng userlatLng = new LatLng(location.getLatitude(),location.getLongitude());
+        MarkerOptions options = new MarkerOptions().position(userlatLng).title("Your Destination")
+                .snippet("You are going there")
+                .draggable(true);
+        if(destMarker == null)
+        {
+            destMarker = mMap.addMarker(options);
+        }
+      else
+        {
+            clearMap();
+            destMarker = mMap.addMarker(options);
+        }
+
+
+
+    }
+    @SuppressLint("MissingPermission")
+    private void getLocation()
+    {
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,5000,0,locationListener);
+        Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        // set the known location as home location
+        setHomeLocation(lastKnownLocation);
+    }
+
+    private void requestPermission()
+    {
+        ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION},Request_Code);
+    }
+
+    private boolean checkPermission()
+    {
+        int permissionStatus = ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION);
+        return permissionStatus == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (Request_Code == requestCode)
+        {
+            if(ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+            {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,5000,10,locationListener);
+            }
+        }
+    }
+
+    private void setHomeLocation(Location location)
+    {
+       // mMap.clear();
+        LatLng userLocation = new LatLng(location.getLatitude(),location.getLongitude());
+
+        MarkerOptions options = new MarkerOptions().position(userLocation).title("My Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)).snippet("You are here");
+        homeMarker = mMap.addMarker(options);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,15));
+
+    }
+
+    private void clearMap()
+    {
+        if (destMarker != null)
+        {
+            destMarker.remove();
+            destMarker = null;
+        }
+    }
+
+    private void drawLine()
+    {
+        
     }
 }
