@@ -8,6 +8,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -23,17 +24,25 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private final int Request_Code = 1;
+
     private Marker homeMarker;
     private Marker destMarker;
 
     Polyline line;
     Polygon shape;
+    private final int polygon_points = 3;
+    List<Marker> markers = new ArrayList<>();
 
     LocationManager locationManager;
     LocationListener locationListener;
@@ -114,16 +123,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         MarkerOptions options = new MarkerOptions().position(userlatLng).title("Your Destination")
                 .snippet("You are going there")
                 .draggable(true);
-        if(destMarker == null)
-        {
-            destMarker = mMap.addMarker(options);
-        }
-      else
-        {
-            clearMap();
-            destMarker = mMap.addMarker(options);
-        }
 
+        // to draw line between two points
+//        if(destMarker == null)
+//        {
+//            destMarker = mMap.addMarker(options);
+//            //drawLine();
+//        }
+//      else
+//        {
+//            clearMap();
+//            destMarker = mMap.addMarker(options);
+//            //drawLine();
+//        }
+//      drawLine();
+
+       //to draw a polygon between the markers
+
+        /*this check if there are already the same number of markers as the polygon points
+        *so, we clear the map
+         */
+
+       if(markers.size() == polygon_points)
+           clearMap();
+
+       markers.add(mMap.addMarker(options));
+
+       //this check is when we reach the number of markers neede for drawing the polygon
+       if(markers.size() == polygon_points)
+           drawShape();
 
 
     }
@@ -169,17 +197,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    private void clearMap()
-    {
-        if (destMarker != null)
-        {
-            destMarker.remove();
-            destMarker = null;
-        }
-    }
+     private void clearMap()
+  {
+      // to clear the line
+//        if (destMarker != null)
+//        {
+//            destMarker.remove();
+//            destMarker = null;
+//        }
+//        line.remove();
+
+      //to clear the polygon
+    for(Marker marker : markers)
+            marker.remove();
+        markers.clear();
+        shape.remove();
+    shape = null;
+   }
+
+
 
     private void drawLine()
     {
-        
+        PolylineOptions options = new PolylineOptions().add(homeMarker.getPosition(), destMarker.getPosition())
+                .color(Color.BLACK)
+                .width(5);
+        line = mMap.addPolyline(options);
+    }
+
+    private void drawShape()
+    {
+        PolygonOptions options = new PolygonOptions().fillColor(0x330000FF)
+                .strokeWidth(5)
+                .strokeColor(Color.RED);
+
+        for (int i=0; i<polygon_points; i++)
+            options.add(markers.get(i).getPosition());
+        shape = mMap.addPolygon(options);
+
     }
 }
